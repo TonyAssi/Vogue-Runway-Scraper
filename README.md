@@ -7,6 +7,11 @@ pip install -r requirements.txt
 ```
 
 ## Usage
+Import the scraper module
 ```python
->>> import vogue
+import vogue
+```
+Get a list of all the runway shows from a particular designer
+```python
+vogue.designer_to_shows('gucci')
 ```
