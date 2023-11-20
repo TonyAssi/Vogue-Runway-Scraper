@@ -1,5 +1,5 @@
 # Vogue Runway Scraper
-Scrapes images from [Vogue Runway](https://www.vogue.com/fashion-shows).
+Scrapes high res images from [Vogue Runway](https://www.vogue.com/fashion-shows).
 
 ## Installation
 ```bash
