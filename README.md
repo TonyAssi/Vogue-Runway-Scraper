@@ -1,7 +1,7 @@
 # Vogue Runway Scraper
 Scrapes high resolution images from [Vogue Runway](https://www.vogue.com/fashion-shows).
 
-![](https://cdn.discordapp.com/attachments/1120417968032063538/1175972124716957837/gucci.png?ex=656d2c63&is=655ab763&hm=13fe4faf0cabc6c0ddbc4be0b41e9397ff27a6e19eed8f4b9bd696926cc169c1&)
+![gucci-spring-2018-ready-to-wear-1](https://github.com/TonyAssi/Vogue-Runway-Scraper/assets/42156881/081f2c82-fbc5-419f-a0e8-52f8f1a8cdcd)
 
 ## Installation
 ```bash
