@@ -23,7 +23,7 @@ def designer_to_shows(designer):
     soup = BeautifulSoup(r.content, 'html5lib') # If this line causes an error, run 'pip install html5lib' or install html5lib
 
     # Load a dict of the json file with the relevent data
-    js = str(soup.find_all('script', type='text/javascript')[3])
+    js = str(soup.find_all('script', type='text/javascript')[4])
     js = js.split(' = ')[1]
     js = js.split(';<')[0]
     data = json.loads(js)
@@ -72,7 +72,7 @@ def designer_show_to_download_images(designer, show, save_path):
 
     # Load a dict of the json file with the relevent data
     try:
-        js = str(soup.find_all('script', type='text/javascript')[3])
+        js = str(soup.find_all('script', type='text/javascript')[4])
         js = js.split(' = ')[1]
         js = js.split(';</') [0]
         data = json.loads(js)
