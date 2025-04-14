@@ -27,3 +27,15 @@ Download all images from all shows of a designer
 ```python
 vogue.designer_to_download_images('gucci', './images')
 ```
+Save image urls to csv from a designer and specific runway show
+```python
+vogue.designer_show_to_csv('gucci', 'Spring 2018 Ready-to-Wear', '.')
+```
+Save image urls to csv from a designer for all shows
+```python
+vogue.designer_to_csv('gucci', '.')
+```
+Save image urls to csv from all designers in a .txt file
+```python
+vogue.all_designers_to_csv('designers.txt', '.')
+```
