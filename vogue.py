@@ -8,162 +8,118 @@ from unidecode import unidecode
 import csv
 
 
-##### Takes in a designer (string) and returns all the shows (list) ##########################################
-def designer_to_shows(designer):
-    # Replace spaces, puncuations, special character, etc. with - and make lowercase
-    designer = designer.replace(' ','-').replace('.','-').replace('&','').replace('+','').replace('--','-').lower()
-    designer = unidecode(designer)
+def extract_json_from_script(scripts, key_fragment):
+    for script in scripts:
+        if script.string and key_fragment in script.string:
+            js = script.string
+            break
+    else:
+        return None
 
-    # Designer URL
-    URL = "https://www.vogue.com/fashion-shows/designer/" + designer
-
-    # Make request
-    r = requests.get(URL)
-
-    # Soupify
-    soup = BeautifulSoup(r.content, 'html5lib') # If this line causes an error, run 'pip install html5lib' or install html5lib
-
-    # Load a dict of the json file with the relevent data
-    js = str(soup.find_all('script', type='text/javascript')[4])
-    js = js.split(' = ')[1]
-    js = js.split(';<')[0]
-    data = json.loads(js)
-
-    # Find the show data within the json
     try:
-        t = data['transformed']
-        d = t['runwayDesignerContent']
-        designer_collections = d['designerCollections']
-    except:
-        print('could not find shows')
+        js_clean = js.split(' = ', 1)[1]
+        brace_count = 0
+        for i, char in enumerate(js_clean):
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    js_clean = js_clean[:i+1]
+                    break
+        return json.loads(js_clean)
+    except Exception as e:
+        print(f"❌ JSON extraction failed: {e}")
+        return None
+
+
+def designer_to_shows(designer):
+    designer = unidecode(designer.replace(' ', '-').replace('.', '-').replace('&', '').replace('+', '').replace('--', '-').lower())
+    URL = f"https://www.vogue.com/fashion-shows/designer/{designer}"
+    r = requests.get(URL)
+    soup = BeautifulSoup(r.content, 'html5lib')
+
+    data = extract_json_from_script(soup.find_all('script', type='text/javascript'), 'window.__PRELOADED_STATE__')
+    if not data:
+        print("❌ Could not find JSON script")
         return []
 
-    # Go through each show and add to list
-    shows = []
-    for show in designer_collections:
-        shows.append(show['hed'])
+    try:
+        shows = [show['hed'] for show in data['transformed']['runwayDesignerContent']['designerCollections']]
+        return shows
+    except Exception as e:
+        print(f"❌ Failed to parse shows list: {e}")
+        return []
 
-    return shows
-####################################################################################################
 
-
-##### Takes in a designer (string) and show (string) and then downloads images to save path (string) ####################
 def designer_show_to_download_images(designer, show, save_path):
-    # Replace spaces with - and lowercase
-    show = show.replace(' ','-').lower()
-    show = unidecode(show)
+    show = unidecode(show.replace(' ', '-').lower())
+    designer = unidecode(designer.replace(' ', '-').replace('.', '-').replace('&', '').replace('+', '').replace('--', '-').lower())
+    show_path = os.path.join(save_path, designer, show)
+    if os.path.exists(show_path):
+        print('Photos already downloaded')
+        return
 
-    # Replace spaces, puncuations, special character, etc. with - and make lowercase
-    designer = designer.replace(' ','-').replace('.','-').replace('&','').replace('+','').replace('--','-').lower()
-    designer = unidecode(designer)
-
-    # Check to see if images are already downloaded
-    if(os.path.exists(save_path + '/' + designer+ '/' + show)):
-         print('Photos already downloaded')
-         return None
-
-    # URL of the show
-    url = "https://www.vogue.com/fashion-shows/" + show + '/' + designer
-
-    # Make request
+    url = f"https://www.vogue.com/fashion-shows/{show}/{designer}"
     r = requests.get(url)
+    soup = BeautifulSoup(r.content, 'html5lib')
 
-    # Soupify
-    soup = BeautifulSoup(r.content, 'html5lib') # If this line causes an error, run 'pip install html5lib' or install html5lib
+    data = extract_json_from_script(soup.find_all('script', type='text/javascript'), 'runwayShowGalleries')
+    if not data:
+        print("❌ JSON script not found")
+        return
 
-    # Load a dict of the json file with the relevent data
     try:
-        js = str(soup.find_all('script', type='text/javascript')[4])
-        js = js.split(' = ')[1]
-        js = js.split(';</') [0]
-        data = json.loads(js)
-    except:
-        print('could not find js code')
-        return None
+        items = data['transformed']['runwayShowGalleries']['galleries'][0]['items']
+    except Exception as e:
+        print("❌ Could not find images:", e)
+        return
 
-    # Find the images in the json dict
-    try:
-        t= data['transformed']
-        g = t['runwayShowGalleries']
-        gg = g['galleries']
-        collection = gg[0]
-        #details = gg[1]
-        #beauty = gg[2]
-    except:
-        print('could not fund images')
-        return None
+    os.makedirs(show_path, exist_ok=True)
 
-    # Photos of each look
-    items = collection['items']
-
-    # Create a designer folder if it doesnt exist
-    designer_path = save_path + '/' + designer
-    if not os.path.exists(designer_path): os.makedirs(designer_path)
-
-    # designer/show folder
-    show_path = designer_path + '/' + show
-
-    # Save photos to folder if it doesn't exist
-    if not os.path.exists(show_path):
-        os.makedirs(show_path)
-
-        # Go through each look
-        for look, i in enumerate(items):
-            # Get image url
-            img_url = i['image']['sources']['md']['url']
-
-            # Download image
+    for i, item in enumerate(items):
+        try:
+            img_url = item['image']['sources']['md']['url']
             response = requests.get(img_url)
-            try:
-                img = Image.open(BytesIO(response.content))
-
-                # Save image
-                export_path = show_path + '/' + designer + '-' + show + '-' + str(look) + '.png'
-                img.save(export_path)
-                print(img_url)
-            except:
-                print("error downloading", img_url)
-    else:
-       print('Photos already downloaded')
-
-####################################################################################################
+            img = Image.open(BytesIO(response.content))
+            export_path = os.path.join(show_path, f"{designer}-{show}-{i}.png")
+            img.save(export_path)
+            print(img_url)
+        except Exception as e:
+            print("⚠️ Error downloading:", img_url, e)
 
 
-###### Takes in a designer (string) and downloads all the images from all the shows to the save path (string)
 def designer_to_download_images(designer, save_path):
     shows = designer_to_shows(designer)
     for show in shows:
         print(designer, show)
         designer_show_to_download_images(designer, show, save_path)
-####################################################################################################
 
 
-###### Takes in a designer (string) and show (string) and saves the image urls to a csv
 def designer_show_to_csv(designer, show, save_path=None):
-    # Normalize show and designer names
     show_clean = unidecode(show.replace(' ', '-').lower())
     designer_clean = unidecode(designer.replace(' ', '-').replace('.', '-').replace('&', '').replace('+', '').replace('--', '-').lower())
 
-    # If saving to CSV, ensure folder exists
     if save_path:
         os.makedirs(save_path, exist_ok=True)
         csv_path = os.path.join(save_path, f"{designer_clean}_{show_clean}.csv")
         if os.path.exists(csv_path):
             print('CSV already exists:', csv_path)
-            return None  # prevent duplicate scraping
+            return None
 
-    # Show URL
     url = f"https://www.vogue.com/fashion-shows/{show_clean}/{designer_clean}"
+    r = requests.get(url)
+    soup = BeautifulSoup(r.content, 'html5lib')
+
+    data = extract_json_from_script(soup.find_all('script', type='text/javascript'), 'runwayShowGalleries')
+    if not data:
+        print(f"❌ Could not load show: {designer} - {show}")
+        return None
 
     try:
-        r = requests.get(url)
-        soup = BeautifulSoup(r.content, 'html5lib')
-        js = str(soup.find_all('script', type='text/javascript')[4])
-        js = js.split(' = ')[1].split(';</')[0]
-        data = json.loads(js)
         items = data['transformed']['runwayShowGalleries']['galleries'][0]['items']
     except Exception as e:
-        print(f"❌ Could not load show: {designer} - {show}: {e}")
+        print(f"❌ Failed to find gallery items: {e}")
         return None
 
     rows = []
@@ -174,7 +130,6 @@ def designer_show_to_csv(designer, show, save_path=None):
         except:
             print('⚠️ Skipping bad image item')
 
-    # Optionally write CSV
     if save_path and rows:
         with open(csv_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
@@ -183,9 +138,8 @@ def designer_show_to_csv(designer, show, save_path=None):
         print(f"✅ CSV saved to {csv_path}")
 
     return rows
-####################################################################################################
 
-###### Takes in a designer (string) and saves the image urls to a csv
+
 def designer_to_csv(designer, save_path):
     designer_clean = unidecode(designer.replace(' ', '-').replace('.', '-').replace('&', '').replace('+', '').replace('--', '-').lower())
     os.makedirs(save_path, exist_ok=True)
@@ -215,19 +169,12 @@ def designer_to_csv(designer, save_path):
         print(f"✅ All shows saved to {csv_path}")
     else:
         print("No images found to write.")
-####################################################################################################
 
-###### Takes a .txt file of designers and saves all the images of all the shows of all the designers to a csv
+
 def all_designers_to_csv(txt_path, save_path):
-    import csv
-
-    # Make sure output directory exists
     os.makedirs(save_path, exist_ok=True)
-
-    # Final combined CSV path
     csv_path = os.path.join(save_path, "all_designers.csv")
 
-    # Read designer names from .txt file
     try:
         with open(txt_path, 'r', encoding='utf-8') as f:
             designers = [line.strip() for line in f if line.strip()]
@@ -239,7 +186,6 @@ def all_designers_to_csv(txt_path, save_path):
         print("No designers found in the file.")
         return
 
-    # Track which designer/show combos have already been written
     existing_rows = set()
     if os.path.exists(csv_path):
         with open(csv_path, 'r', encoding='utf-8') as f:
@@ -247,11 +193,9 @@ def all_designers_to_csv(txt_path, save_path):
             for row in reader:
                 existing_rows.add((row['designer'], row['show']))
 
-    # Open CSV in append mode
     with open(csv_path, 'a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
 
-        # Write header if file is empty
         if os.stat(csv_path).st_size == 0:
             writer.writerow(['designer', 'show', 'image_url'])
 
@@ -268,10 +212,8 @@ def all_designers_to_csv(txt_path, save_path):
                     rows = designer_show_to_csv(designer, show)
                     if rows:
                         writer.writerows(rows)
-                        f.flush()  # ✅ Force save after every designer/show
+                        f.flush()
                         existing_rows.update((designer, show) for _ in rows)
 
             except Exception as e:
                 print(f"❌ Failed to process {designer}: {e}")
-####################################################################################################
-
