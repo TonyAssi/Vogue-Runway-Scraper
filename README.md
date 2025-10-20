@@ -3,7 +3,7 @@ Scrapes high resolution images from [Vogue Runway](https://www.vogue.com/fashion
 
 ![gucci-spring-2018-ready-to-wear-1](https://github.com/TonyAssi/Vogue-Runway-Scraper/assets/42156881/081f2c82-fbc5-419f-a0e8-52f8f1a8cdcd)
 
-Try out the Web Demo: [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/tonyassi/vogue-runway-scraper)
+Try out the Web Demo: [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)]([https://huggingface.co/spaces/tonyassi/vogue-runway-scraper](https://huggingface.co/spaces/tonyassi/vogue-runway))
 
 ## Installation
 ```bash
